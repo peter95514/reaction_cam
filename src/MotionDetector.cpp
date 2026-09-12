@@ -3,6 +3,7 @@
 MotionDetector::MotionDetector(int history, double varThreshold, bool detectShadows, double minArea) {
     bg_subtractor = cv::createBackgroundSubtractorMOG2(history, varThreshold, detectShadows);
     min_area = minArea;
+    net = cv::dnn::readNetFromONNX("yolo8n-pose.onnx");
 }
 
 std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
@@ -29,4 +30,9 @@ std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
 
     return rois;
 }
+
+bool MotionDetector::is_tracking_skeleton() {
+    return is_tracking_skeleton_or_not;
+}
+
 MotionDetector::~MotionDetector() {}
