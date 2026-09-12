@@ -7,7 +7,7 @@
 MotionDetector::MotionDetector(int history, double varThreshold, bool detectShadows, double minArea) {
     bg_subtractor = cv::createBackgroundSubtractorMOG2(history, varThreshold, detectShadows);
     min_area = minArea;
-    net = cv::dnn::readNetFromONNX("yolo8n-pose.onnx");
+    net = cv::dnn::readNetFromONNX("yolov8n-pose.onnx");
 }
 
 std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {

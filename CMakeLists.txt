@@ -35,3 +35,14 @@ add_executable(ReactionTest ${SOURCES})
 
 # 連結 OpenCV 動態函式庫
 target_link_libraries(ReactionTest ${OpenCV_LIBS})
+
+# ==========================================
+# 4. 建置完成後,自動複製模型檔到執行檔目錄
+# ==========================================
+add_custom_command(
+    TARGET ReactionTest POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/models/yolo8n-pose.onnx"
+        "$<TARGET_FILE_DIR:ReactionTest>/yolo8n-pose.onnx"
+    COMMENT "複製 YOLO pose 模型到執行目錄"
+)
