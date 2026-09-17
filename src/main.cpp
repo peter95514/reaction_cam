@@ -41,28 +41,19 @@ struct StageStats {
     }
 };
 
-int main(int argc, char **argv) {
+int main() {
     const int NUM_FRAMES = 300;    // 想跑幾幀就改這裡
     const int WARMUP_FRAMES = 10;  // 前幾幀不計入統計 (避免模型初次載入/cache 影響)
 
     // ---------- 開啟影像來源 ----------
     cv::VideoCapture cap;
-    if (argc > 1) {
-        std::string src = argv[1];
-        bool is_number = !src.empty() && std::all_of(src.begin(), src.end(), ::isdigit);
-        if (is_number) {
-            cap.open(std::stoi(src));
-        } else {
-            cap.open(src);
-        }
-    } else {
-        cap.open(0);  // 預設用攝影機
-    }
+    cap.open(0);  // 預設用攝影機
 
     if (!cap.isOpened()) {
         std::fprintf(stderr, "無法開啟影像來源，請確認路徑或攝影機編號\n");
         return 1;
     }
+    printf("%s", "start");
 
     // ---------- 初始化你的 MotionDetector ----------
     // 參數請依你實際使用的 history / varThreshold / detectShadows / minArea 調整
