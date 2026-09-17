@@ -81,6 +81,10 @@ std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
     return rois;
 }
 
+int MotionDetector::get_frame_counter() {
+    return frame_counter;
+}
+
 void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
     int origW = roiframe.cols;
     int origH = roiframe.rows;
@@ -147,11 +151,7 @@ void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
 }
 
 void MotionDetector::update(const cv::Mat &roiframe) {
-    if (is_tracking_skeleton_or_not) {
-        tracking_skeleton(roiframe);
-    } else {
-        detect_skeleton(roiframe);
-    }
+    frame_counter = (frame_counter + 1) % 60;
 }
 
 void MotionDetector::tracking_skeleton(const cv::Mat &roiframe) {}

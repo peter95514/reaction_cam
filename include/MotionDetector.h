@@ -19,10 +19,13 @@ private:
     std::vector<cv::Point> now_skeleton_point;
     cv::Rect skeleton_bbox;
 
+    int frame_counter = 0;
+
 public:
     MotionDetector(int history = 500, double varThreshold = 25.0, bool detectShadows = false, double minArea = 500);
     std::vector<cv::Rect> get_rois(const cv::Mat& frame);
     bool is_tracking_skeleton();
+    int get_frame_counter();
     void update(const cv::Mat& roiframe);
     void detect_skeleton(const cv::Mat& roiframe);
     void tracking_skeleton(const cv::Mat& roiframe);
