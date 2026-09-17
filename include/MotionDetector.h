@@ -9,7 +9,8 @@ struct Keypoint {
 
 class MotionDetector {
 private:
-    cv::dnn::Net net;
+    cv::dnn::Net skeleton_net;
+    cv::dnn::Net roi_net;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> bg_subtractor;
     double min_area;

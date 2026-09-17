@@ -43,6 +43,8 @@ add_custom_command(
     TARGET ReactionTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/model/yolov8n-pose.onnx"
+        "${CMAKE_SOURCE_DIR}/model/yolov8n.onnx"
         "$<TARGET_FILE_DIR:ReactionTest>/yolov8n-pose.onnx"
+        "$<TARGET_FILE_DIR:ReactionTest>/yolov8n.onnx"
     COMMENT "複製 YOLO pose 模型到執行目錄"
 )

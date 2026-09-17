@@ -1,34 +1,80 @@
 #include <MotionDetector.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/core/types.hpp>
-#include <opencv2/dnn/dnn.hpp>
-
 MotionDetector::MotionDetector(int history, double varThreshold, bool detectShadows, double minArea) {
     bg_subtractor = cv::createBackgroundSubtractorMOG2(history, varThreshold, detectShadows);
     min_area = minArea;
-    net = cv::dnn::readNetFromONNX("yolov8n-pose.onnx");
+    skeleton_net = cv::dnn::readNetFromONNX("yolov8n-pose.onnx");
+    roi_net = cv::dnn::readNetFromONNX("yolov8n.onnx");
 }
 
 std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
     std::vector<cv::Rect> rois;
-    cv::Mat gray, blurred, fg_mask, dilated;
 
-    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-    cv::GaussianBlur(gray, blurred, cv::Size(5, 5), 0);
+    float person_conf_threshold = 0.4f;
+    float person_nms_threshold = 0.4f;
+    const int PERSON_CLASS_ID = 0;
 
-    bg_subtractor->apply(blurred, fg_mask);
+    int origW = frame.cols, origH = frame.rows;
+    int targetW = 640, targetH = 640;
+    cv::Size input_size(targetW, targetH);
 
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
-    cv::dilate(fg_mask, dilated, kernel);
+    float scale = std::min((float)targetW / origW, (float)targetH / origH);
+    int newH = static_cast<int>(origH * scale);
+    int newW = static_cast<int>(origW * scale);
 
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Vec4i> hierarchy;
-    cv::findContours(dilated, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    cv::Mat resize;
+    cv::resize(frame, resize, cv::Size(newW, newH));
 
-    for (size_t i = 0; i < contours.size(); i++) {
-        if (cv::contourArea(contours[i]) >= min_area) {
-            rois.push_back(cv::boundingRect(contours[i]));
+    int padX = (targetW - newW) / 2;
+    int padY = (targetH - newH) / 2;
+
+    cv::Mat padded(targetH, targetW, frame.type(), cv::Scalar(114, 114, 114));
+    resize.copyTo(padded(cv::Rect(padX, padY, newW, newH)));
+    cv::Mat blob = cv::dnn::blobFromImage(padded, 1.0 / 255.0, input_size, cv::Scalar(0, 0, 0), true, false);
+
+    roi_net.setInput(blob);
+    cv::Mat output = roi_net.forward();
+
+    cv::Mat data = output.reshape(1, output.size[1]);
+    cv::Mat dataT;
+    cv::transpose(data, dataT);
+
+    std::vector<cv::Rect> boxes;
+    std::vector<float> confidences;
+
+    for (int i = 0; i < dataT.rows; ++i) {
+        cv::Mat scores = dataT.row(i).colRange(4, dataT.cols);
+        cv::Point classIdPoint;
+        double maxScore;
+        cv::minMaxLoc(scores, nullptr, &maxScore, nullptr, &classIdPoint);
+
+        if (maxScore < person_conf_threshold) continue;
+        if (classIdPoint.x != PERSON_CLASS_ID) continue;
+
+        float cx = dataT.at<float>(i, 0);
+        float cy = dataT.at<float>(i, 1);
+        float w = dataT.at<float>(i, 2);
+        float h = dataT.at<float>(i, 3);
+
+        float x0 = (cx - w / 2 - padX) / scale;
+        float y0 = (cy - h / 2 - padY) / scale;
+        float boxW = w / scale;
+        float boxH = h / scale;
+        cv::Rect r(static_cast<int>(x0), static_cast<int>(y0), static_cast<int>(boxW), static_cast<int>(boxH));
+        r &= cv::Rect(0, 0, origW, origH);
+
+        if (r.area() <= 0) continue;
+
+        boxes.push_back(r);
+        confidences.push_back(static_cast<float>(maxScore));
+    }
+
+    std::vector<int> nms_indices;
+    cv::dnn::NMSBoxes(boxes, confidences, person_conf_threshold, person_nms_threshold, nms_indices);
+
+    for (int idx : nms_indices) {
+        if (boxes[idx].area() >= min_area) {
+            rois.push_back(boxes[idx]);
         }
     }
 
@@ -58,8 +104,8 @@ void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
 
     cv::Mat blob = cv::dnn::blobFromImage(padded, 1.0 / 255.0, input_size, cv::Scalar(0, 0, 0), true, false);
 
-    net.setInput(blob);
-    cv::Mat output = net.forward();
+    skeleton_net.setInput(blob);
+    cv::Mat output = skeleton_net.forward();
 
     cv::Mat data = output.reshape(1, 56);
     cv::Mat dataT;
