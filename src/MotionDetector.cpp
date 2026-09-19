@@ -1,7 +1,9 @@
 #include <MotionDetector.h>
 
-MotionDetector::MotionDetector(int history, double varThreshold, bool detectShadows, double minArea) {
-    bg_subtractor = cv::createBackgroundSubtractorMOG2(history, varThreshold, detectShadows);
+MotionDetector::MotionDetector(int history, double varThreshold,
+                               bool detectShadows, double minArea) {
+    bg_subtractor = cv::createBackgroundSubtractorMOG2(history, varThreshold,
+                                                       detectShadows);
     min_area = minArea;
     skeleton_net = cv::dnn::readNetFromONNX("yolov8n-pose.onnx");
     roi_net = cv::dnn::readNetFromONNX("yolov8n.onnx");
@@ -30,7 +32,8 @@ std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
 
     cv::Mat padded(targetH, targetW, frame.type(), cv::Scalar(114, 114, 114));
     resize.copyTo(padded(cv::Rect(padX, padY, newW, newH)));
-    cv::Mat blob = cv::dnn::blobFromImage(padded, 1.0 / 255.0, input_size, cv::Scalar(0, 0, 0), true, false);
+    cv::Mat blob = cv::dnn::blobFromImage(padded, 1.0 / 255.0, input_size,
+                                          cv::Scalar(0, 0, 0), true, false);
 
     roi_net.setInput(blob);
     cv::Mat output = roi_net.forward();
@@ -60,7 +63,8 @@ std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
         float y0 = (cy - h / 2 - padY) / scale;
         float boxW = w / scale;
         float boxH = h / scale;
-        cv::Rect r(static_cast<int>(x0), static_cast<int>(y0), static_cast<int>(boxW), static_cast<int>(boxH));
+        cv::Rect r(static_cast<int>(x0), static_cast<int>(y0),
+                   static_cast<int>(boxW), static_cast<int>(boxH));
         r &= cv::Rect(0, 0, origW, origH);
 
         if (r.area() <= 0) continue;
@@ -70,7 +74,8 @@ std::vector<cv::Rect> MotionDetector::get_rois(const cv::Mat &frame) {
     }
 
     std::vector<int> nms_indices;
-    cv::dnn::NMSBoxes(boxes, confidences, person_conf_threshold, person_nms_threshold, nms_indices);
+    cv::dnn::NMSBoxes(boxes, confidences, person_conf_threshold,
+                      person_nms_threshold, nms_indices);
 
     for (int idx : nms_indices) {
         if (boxes[idx].area() >= min_area) {
@@ -103,10 +108,12 @@ void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
     int padX = (targetW - newW) / 2;
     int padY = (targetH - newH) / 2;
 
-    cv::Mat padded(targetH, targetW, roiframe.type(), cv::Scalar(114, 114, 114));
+    cv::Mat padded(targetH, targetW, roiframe.type(),
+                   cv::Scalar(114, 114, 114));
     resized.copyTo(padded(cv::Rect(padX, padY, newW, newH)));
 
-    cv::Mat blob = cv::dnn::blobFromImage(padded, 1.0 / 255.0, input_size, cv::Scalar(0, 0, 0), true, false);
+    cv::Mat blob = cv::dnn::blobFromImage(padded, 1.0 / 255.0, input_size,
+                                          cv::Scalar(0, 0, 0), true, false);
 
     skeleton_net.setInput(blob);
     cv::Mat output = skeleton_net.forward();
@@ -125,6 +132,11 @@ void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
             bestidx = i;
         }
     }
+    if (bestidx < 0 || bestconf < 0.3f) {
+        now_skeleton_point.clear();
+        now_keypoints.clear();
+        return;
+    }
 
     std::vector<Keypoint> keypoints;
     const int numkpts = 17;
@@ -136,6 +148,7 @@ void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
     }
 
     result.reserve(keypoints.size());
+    now_keypoints.clear();
 
     for (const auto &kp : keypoints) {
         if (kp.confidence < confThreshold) {
@@ -145,6 +158,7 @@ void MotionDetector::detect_skeleton(const cv::Mat &roiframe) {
         float origX = (kp.point.x - padX) / scale;
         float origY = (kp.point.y - padY) / scale;
         result.emplace_back(static_cast<int>(origX), static_cast<int>(origY));
+        now_keypoints.push_back({cv::Point2f(origX, origY), kp.confidence});
     }
 
     now_skeleton_point = result;
@@ -162,6 +176,10 @@ bool MotionDetector::is_tracking_skeleton() {
 
 std::vector<cv::Point> MotionDetector::get_skeleton_point() {
     return now_skeleton_point;
+}
+
+std::vector<Keypoint> MotionDetector::get_keypoints() {
+    return now_keypoints;
 }
 
 MotionDetector::~MotionDetector() {}
