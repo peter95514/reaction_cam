@@ -4,8 +4,8 @@ enum class ScreenId { Menu, Setting, Trial, Exit };
 
 class Screen {
 public:
-    virtual ~Screen();
+    virtual ~Screen() = default;
     virtual void enter();
     virtual void exit();
-    virtual ScreenId tick();
+    virtual ScreenId tick() = 0;
 };
