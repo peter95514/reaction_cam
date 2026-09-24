@@ -5,25 +5,38 @@
 #include "Screen.h"
 #include "Ui.h"
 
-void TrialScreen::enter() {}
+void TrialScreen::enter() {
+    state_ = State::Idle;
+    this->idleEnd_ = Clock::now() + toDur(cfg_.countdown);
+}
+
 void TrialScreen::exit() {}
+
+Clock::duration TrialScreen::toDur(float sec) {
+    return std::chrono::duration_cast<Clock::duration>(
+        std::chrono::duration<float>(sec));
+}
+
+Clock::duration TrialScreen::randomGap() {
+    std::uniform_real_distribution<float> d(cfg_.gapMin, cfg_.gapMax);
+    return toDur(d(rng_));
+}
+
+void TrialScreen::beginRun(Clock::time_point now) {
+    state_ = State::On;
+    runEnd_ = now + toDur(cfg_.duration);
+    nextChange_ = now + randomGap();
+}
+
 ScreenId TrialScreen::tick() {
     ScreenId next = ScreenId::Trial;
+    const auto now = Clock::now();
+    if (this->state_ == State::Idle && now >= idleEnd_) beginRun(now);
 
-    ui::beginFullscreen("##Trial");
-    ImGui::Dummy({0, 100});
-    ImGui::SetWindowFontScale(2.2f);
-    ui::centeredText("測試");
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::Dummy({0, 50});
-
-    if (ui::centeredButton("開始測試", 340, 68)) next = ScreenId::Trial;
-    if (ui::centeredButton("設定", 340, 68)) next = ScreenId::Setting;
-    if (ui::centeredButton("離開", 340, 68)) next = ScreenId::Exit;
-
-    ImGui::End();
-
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) next = ScreenId::Exit;
-
+    if (this->state_ != State::Idle) {
+        if (now >= this->runEnd_) {
+            return ScreenId::Menu;
+        }
+    }
     return next;
 }
