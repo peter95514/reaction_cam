@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 
+#include <cstdio>
 #include <random>
 
 #include "Screen.h"
@@ -95,6 +96,12 @@ ScreenId TrialScreen::tick() {
         }
         updateLight(now);
         if (auto result = coordinator_.poll()) {
+            float ms = std::chrono::duration<float, std::milli>(result->latency)
+                           .count();
+
+            std::printf("%s 反應時間: %.1f ms (passed=%d)\n",
+                        side_ == Side::Left ? "左手" : "右手", ms,
+                        result->passed);
         }
     }
 
