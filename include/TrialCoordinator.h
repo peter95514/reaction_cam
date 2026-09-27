@@ -3,7 +3,6 @@
 #include <optional>
 
 #include "TrialController.h"
-#include "TrialScreen.h"
 
 class TrialCoordinator {
 private:

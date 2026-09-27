@@ -7,7 +7,7 @@
 
 #include "ActionEvaluator.h"
 #include "MotionDetector.h"
-#include "TrialScreen.h"
+#include "Screen.h"
 
 struct FrameResult {
     Clock::time_point t;
