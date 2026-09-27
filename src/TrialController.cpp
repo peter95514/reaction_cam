@@ -23,7 +23,15 @@ TrialController::TrialController()
 TrialController::~TrialController() {
     stop();
 }
+void TrialController::resetRecords() {
+    std::lock_guard<std::mutex> lk(mtx_);
+    records_.clear();
+}
 
+std::vector<FrameResult> TrialController::snapshotRecords() const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    return records_;
+}
 void TrialController::start() {
     if (running_) return;
     if (!cap_.open(0)) throw std::runtime_error("cant open cam");

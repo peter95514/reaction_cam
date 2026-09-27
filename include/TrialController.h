@@ -9,6 +9,12 @@
 #include "MotionDetector.h"
 #include "TrialScreen.h"
 
+struct FrameResult {
+    Clock::time_point t;
+    bool lpass;
+    bool rpass;
+};
+
 class TrialController {
 private:
     cv::VideoCapture cap_;
@@ -19,6 +25,7 @@ private:
 
     std::thread worker_;
     std::atomic<bool> running_{false};
+    std::vector<FrameResult> records_;
 
     bool lpass_;
     bool rpass_;
@@ -33,4 +40,7 @@ public:
 
     void start();
     void stop();
+
+    void resetRecords();
+    std::vector<FrameResult> snapshotRecords() const;
 };

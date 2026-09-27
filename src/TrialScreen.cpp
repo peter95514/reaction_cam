@@ -10,9 +10,12 @@
 void TrialScreen::enter() {
     state_ = State::Idle;
     this->idleEnd_ = Clock::now() + toDur(cfg_.countdown);
+    coordinator_.start();
 }
 
-void TrialScreen::exit() {}
+void TrialScreen::exit() {
+    coordinator_.stop();
+}
 
 Clock::duration TrialScreen::toDur(float sec) {
     return std::chrono::duration_cast<Clock::duration>(
@@ -63,12 +66,15 @@ void TrialScreen::updateLight(Clock::time_point now) {
     if (islig_) {
         islig_ = false;
         nextChange_ = now + randomGap();
+        coordinator_.notifyLightOff();
     } else {
         islig_ = true;
         nextChange_ = now + toDur(cfg_.onSec);
         side_ = std::uniform_int_distribution<int>(0, 1)(rng_) == 0
                     ? Side::Left
                     : Side::Right;
+
+        coordinator_.notifyLightOn(this->side_, now);
     }
 }
 
@@ -88,6 +94,8 @@ ScreenId TrialScreen::tick() {
             return ScreenId::Menu;
         }
         updateLight(now);
+        if (auto result = coordinator_.poll()) {
+        }
     }
 
     ui::beginFullscreen("##Trial");

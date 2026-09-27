@@ -4,10 +4,9 @@
 #include <random>
 
 #include "Screen.h"
+#include "TrialCoordinator.h"
 
 enum class State { Idle, Waiting, On };
-enum class Side { Left, Right };
-using Clock = std::chrono::steady_clock;
 
 class TrialScreen : public Screen {
 public:
@@ -39,6 +38,8 @@ private:
     void beginRun(Clock::time_point now);
     void updateLight(Clock::time_point now);
     void drawLight();
+
+    TrialCoordinator coordinator_;
 
 public:
     TrialScreen() = default;
