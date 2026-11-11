@@ -33,6 +33,7 @@ void TrialScreen::enter() {
 
 void TrialScreen::exit() {
     coordinator_.stop();
+    cv::destroyWindow("DEBUG camera");  // DEBUG
 }
 
 Clock::duration TrialScreen::toDur(float sec) {
@@ -145,5 +146,8 @@ ScreenId TrialScreen::tick() {
     ImGui::End();
 
     if (ImGui::IsKeyPressed(ImGuiKey_Escape)) next = ScreenId::Menu;
+        cv::Mat dbg;
+    if (coordinator_.debugFrame(dbg)) cv::imshow("DEBUG camera", dbg);
+    cv::waitKey(1);
     return next;
 }

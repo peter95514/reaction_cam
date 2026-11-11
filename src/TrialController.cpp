@@ -13,6 +13,14 @@ TrialController::TrialController()
     : evaluator_(0.4f, 80.f, 0.5f) {
 }
 
+// DEBUG
+bool TrialController::debugFrame(cv::Mat& out) const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    if (debugFrame_.empty()) return false;
+    debugFrame_.copyTo(out);
+    return true;
+}
+
 TrialController::~TrialController() {
     stop();
 }
@@ -59,19 +67,55 @@ void TrialController::setAction(const Action& action){
 void TrialController::workerLoop() {
     cv::Mat frame;
     int dbgFrame = 0;
+
+    static const int kPairs[][2] = {{5, 6},  {5, 7},   {7, 9},   {6, 8},
+                                    {8, 10}, {5, 11},  {6, 12},  {11, 12},
+                                    {11, 13}, {13, 15}, {12, 14}, {14, 16}};
+
     while (running_) {
         if (!cap_.read(frame) || frame.empty()) break;
         const auto captured = Clock::now();
 
+        cv::Rect roi;
+
         std::vector<Keypoint> kp;
         std::vector<cv::Rect> rois = detector_->get_rois(frame);
         if (!rois.empty()) {
-            cv::Rect roi = rois[0] & cv::Rect(0, 0, frame.cols, frame.rows);
+            roi = rois[0] & cv::Rect(0, 0, frame.cols, frame.rows);
             if (roi.width > 0 && roi.height > 0) {
                 detector_->detect_skeleton(frame(roi));
                 kp = detector_->get_keypoints();
             }
         }
+
+
+        // DEBUG: 在影格副本上畫 ROI、骨架、每個關鍵點的信心值
+        cv::Mat dbg = frame.clone();
+        if (roi.area() > 0) {
+            cv::rectangle(dbg, roi, {0, 255, 0}, 2);
+            const cv::Point off = roi.tl();
+            const float minConf = 0.4f;  // 與 ActionEvaluator 建構參數一致
+            for (const auto& pr : kPairs) {
+                if (kp.size() < 17) break;
+                if (kp[pr[0]].confidence < minConf ||
+                    kp[pr[1]].confidence < minConf)
+                    continue;
+                cv::line(dbg, cv::Point(kp[pr[0]].point) + off,
+                         cv::Point(kp[pr[1]].point) + off, {255, 200, 0}, 2);
+            }
+            for (size_t i = 0; i < kp.size(); ++i) {
+                const bool ok = kp[i].confidence >= minConf;
+                const cv::Point p = cv::Point(kp[i].point) + off;
+                cv::circle(dbg, p, 4, ok ? cv::Scalar(0, 255, 0)
+                                         : cv::Scalar(0, 0, 255), -1);
+                cv::putText(dbg, cv::format("%zu:%.2f", i, kp[i].confidence),
+                            p + cv::Point(5, -5), cv::FONT_HERSHEY_SIMPLEX,
+                            0.4, {255, 255, 255}, 1);
+            }
+        }
+
+
+
         std::lock_guard<std::mutex> lk(mtx_);
         EvalResult r = evaluator_.evaluate(kp);
         passed_ = r.valid && r.passed;

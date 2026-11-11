@@ -31,6 +31,8 @@ private:
 
     void workerLoop();
 
+    cv::Mat debugFrame_; //debug
+
 public:
     TrialController();
     ~TrialController();
@@ -44,4 +46,5 @@ public:
 
     void resetRecords();
     std::vector<FrameResult> snapshotRecords() const;
+    bool debugFrame(cv::Mat& out) const;  // DEBUG
 };

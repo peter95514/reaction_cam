@@ -13,11 +13,13 @@ private:
     bool latched_ = false;
     Clock::time_point onTime_;
 
+
 public:
     struct ReactionResult {
         bool passed;
         Clock::duration latency;
     };
+    bool debugFrame(cv::Mat& out) const { return controller_.debugFrame(out); }  // DEBUG
 
     void start();
     void stop();
