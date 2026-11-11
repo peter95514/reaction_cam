@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "TrialController.h"
+#include "Cue.h"
 
 class TrialCoordinator {
 private:
@@ -10,7 +11,6 @@ private:
 
     bool armed_ = false;
     bool latched_ = false;
-    Side side_ = Side::Left;
     Clock::time_point onTime_;
 
 public:
@@ -22,7 +22,7 @@ public:
     void start();
     void stop();
 
-    void notifyLightOn(Side side, Clock::time_point t);
+    void notifyLightOn(const Cue& cue, Clock::time_point t);
     void notifyLightOff();
 
     std::optional<ReactionResult> poll();

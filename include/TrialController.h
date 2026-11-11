@@ -8,27 +8,26 @@
 #include "ActionEvaluator.h"
 #include "MotionDetector.h"
 #include "Screen.h"
+#include "Cue.h"
 
 struct FrameResult {
     Clock::time_point t;
-    bool lpass;
-    bool rpass;
+    bool passed;
 };
 
 class TrialController {
 private:
     cv::VideoCapture cap_;
     std::unique_ptr<MotionDetector> detector_;
-    ActionEvaluator leftEval_;
-    ActionEvaluator rightEval_;
+    ActionEvaluator evaluator_;
     mutable std::mutex mtx_;
 
     std::thread worker_;
     std::atomic<bool> running_{false};
     std::vector<FrameResult> records_;
 
-    bool lpass_;
-    bool rpass_;
+    bool passed_ = 0;
+    bool hasAction_ = 0;
 
     void workerLoop();
 
@@ -36,10 +35,12 @@ public:
     TrialController();
     ~TrialController();
 
-    bool isPassed(Side side) const;
+    bool isPassed() const;
 
     void start();
     void stop();
+
+    void setAction(const Action& action);
 
     void resetRecords();
     std::vector<FrameResult> snapshotRecords() const;

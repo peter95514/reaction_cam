@@ -2,7 +2,9 @@
 #include <chrono>
 #include <functional>
 #include <random>
+#include <vector>
 
+#include "Cue.h"
 #include "Screen.h"
 #include "TrialCoordinator.h"
 
@@ -16,6 +18,8 @@ public:
         float onSec = 1.0f;
         float gapMax = 1.0f;
         float gapMin = 0.4f;
+        int lightCount = 2;
+        std::vector<Cue> cues;
     };
 
 private:
@@ -28,9 +32,8 @@ private:
     Clock::time_point idleEnd_;
 
     Config cfg_;  // config
-
     bool islig_;  // is the light on?
-    Side side_;
+    Cue cue_;
 
     Clock::duration toDur(float sec);
     Clock::duration randomGap();
@@ -42,7 +45,7 @@ private:
     TrialCoordinator coordinator_;
 
 public:
-    TrialScreen() = default;
+    TrialScreen();
 
     void enter() override;
     void exit() override;

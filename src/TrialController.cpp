@@ -1,6 +1,7 @@
 #include "TrialController.h"
 
 #include <memory>
+#include <mutex>
 #include <opencv2/core/types.hpp>
 #include <stdexcept>
 #include <thread>
@@ -9,15 +10,7 @@
 #include "MotionDetector.h"
 
 TrialController::TrialController()
-    : leftEval_(0.4f, 80.f, 0.5f), rightEval_(0.4f, 80.f, 0.5f) {
-    leftEval_.changerule({
-        {"L_shoulder", L_HIP, L_SHOULDER, L_ELBOW, 140.f, 180.f, 2.0f},
-        {"L_elbow", L_SHOULDER, L_ELBOW, L_WRIST, 130.f, 180.f, 1.0f},
-    });
-    rightEval_.changerule({
-        {"R_shoulder", R_HIP, R_SHOULDER, R_ELBOW, 140.f, 180.f, 2.0f},
-        {"R_elbow", R_SHOULDER, R_ELBOW, R_WRIST, 130.f, 180.f, 1.0f},
-    });
+    : evaluator_(0.4f, 80.f, 0.5f) {
 }
 
 TrialController::~TrialController() {
@@ -32,6 +25,7 @@ std::vector<FrameResult> TrialController::snapshotRecords() const {
     std::lock_guard<std::mutex> lk(mtx_);
     return records_;
 }
+
 void TrialController::start() {
     if (running_) return;
     if (!cap_.open(0)) throw std::runtime_error("cant open cam");
@@ -49,32 +43,37 @@ void TrialController::stop() {
     detector_.reset();
     std::lock_guard<std::mutex> lk(mtx_);
 }
-bool TrialController::isPassed(Side side) const {
+bool TrialController::isPassed() const {
     std::lock_guard<std::mutex> lk(mtx_);
-    return side == Side::Left ? lpass_ : rpass_;
+    return passed_;
+}
+
+void TrialController::setAction(const Action& action){
+    std::lock_guard<std::mutex> lk(mtx_);
+    evaluator_.changerule(action);
+    hasAction_ = !action.empty();
+    passed_ = false;
+    records_.clear();
 }
 
 void TrialController::workerLoop() {
     cv::Mat frame;
-    bool lp = false;
-    bool rp = false;
     while (running_) {
         if (!cap_.read(frame) || frame.empty()) break;
+        const auto captured = Clock::now();
 
+        std::vector<Keypoint> kp;
         std::vector<cv::Rect> rois = detector_->get_rois(frame);
         if (!rois.empty()) {
             cv::Rect roi = rois[0] & cv::Rect(0, 0, frame.cols, frame.rows);
             if (roi.width > 0 && roi.height > 0) {
                 detector_->detect_skeleton(frame(roi));
-                const auto kp = detector_->get_keypoints();
-                EvalResult l = leftEval_.evaluate(kp);
-                EvalResult r = rightEval_.evaluate(kp);
-                lp = l.valid && l.passed;
-                rp = r.valid && r.passed;
+                kp = detector_->get_keypoints();
             }
         }
         std::lock_guard<std::mutex> lk(mtx_);
-        lpass_ = lp;
-        rpass_ = rp;
+        EvalResult r = evaluator_.evaluate(kp);
+        passed_ = r.valid && r.passed;
+        if (hasAction_) records_.push_back({captured, passed_});
     }
 }

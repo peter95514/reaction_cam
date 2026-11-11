@@ -8,8 +8,25 @@
 #include "Screen.h"
 #include "Ui.h"
 
+
+static std::vector<Cue> defaultCues() {
+    Action left = {
+        {"L_shoulder", L_HIP, L_SHOULDER, L_ELBOW, 140.f, 180.f, 2.0f},
+        {"L_elbow", L_SHOULDER, L_ELBOW, L_WRIST, 130.f, 180.f, 1.0f},
+    };
+    Action right = {
+        {"R_shoulder", R_HIP, R_SHOULDER, R_ELBOW, 140.f, 180.f, 2.0f},
+        {"R_elbow", R_SHOULDER, R_ELBOW, R_WRIST, 130.f, 180.f, 1.0f},
+    };
+    return {
+        Cue{LightSignal{0, LightColor::Green}, left},
+        Cue{LightSignal{1, LightColor::Green}, right},
+    };
+}
+
 void TrialScreen::enter() {
     state_ = State::Idle;
+    islig_ = false;
     this->idleEnd_ = Clock::now() + toDur(cfg_.countdown);
     coordinator_.start();
 }
@@ -23,29 +40,46 @@ Clock::duration TrialScreen::toDur(float sec) {
         std::chrono::duration<float>(sec));
 }
 
+TrialScreen::TrialScreen() {
+    cfg_.cues = defaultCues();
+}
+
+static ImU32 toImColor(LightColor c) {
+    switch (c) {
+        case LightColor::Green:
+            return IM_COL32(60, 220, 100, 255);
+        case LightColor::Red:
+            return IM_COL32(230, 70, 70, 255);
+        case LightColor::Blue:
+            return IM_COL32(70, 140, 255, 255);
+        case LightColor::Yellow:
+            return IM_COL32(240, 200, 60, 255);
+    }
+    return IM_COL32(255, 255, 255, 255);
+}
+
 void TrialScreen::drawLight() {
     const ImU32 kOff = IM_COL32(45, 50, 60, 255);
-    const ImU32 kOn = IM_COL32(60, 220, 100, 255);
+    const ImU32 kOn = toImColor(cue_.first.color);
     const ImU32 kRim = IM_COL32(255, 255, 255, 50);
 
     const bool running = state_ != State::Idle;
-
-    bool light[2] = {0, 0};
-
-    if (running && islig_) light[side_ == Side::Left ? 0 : 1] = true;
+    const int n = cfg_.lightCount;
 
     const ImVec2 wp = ImGui::GetWindowPos();
     const ImVec2 ws = ImGui::GetWindowSize();
     const float cx = wp.x + ws.x * 0.5f;
     const float cy = wp.y + ws.y * 0.48f;
-    const float gap = 190.f;  // 圓心到視窗中線的距離
     const float r = 90.f;
-    const char* labels[2] = {"左", "右"};
+    // 燈多時縮小間距，避免超出視窗；n=2 時與原本一樣 (±190)
+    const float spacing =
+        n > 1 ? std::min(380.f, (ws.x - 2.f * (r + 40.f)) / (n - 1)) : 0.f;
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    for (int i = 0; i < 2; ++i) {
-        ImVec2 c{cx + (i == 0 ? -gap : gap), cy};
-        if (light[i]) {
+    for (int i = 0; i < n; ++i) {
+        ImVec2 c{cx + (i - (n - 1) * 0.5f) * spacing, cy};
+        const bool lit = running && islig_ && i == cue_.first.index;
+        if (lit) {
             dl->AddCircleFilled(c, r + 24.f, (kOn & 0x00FFFFFF) | (40u << 24),
                                 64);
             dl->AddCircleFilled(c, r, kOn, 64);
@@ -61,6 +95,7 @@ Clock::duration TrialScreen::randomGap() {
     return toDur(d(rng_));
 }
 
+
 void TrialScreen::updateLight(Clock::time_point now) {
     if (now < this->nextChange_) return;
 
@@ -69,13 +104,13 @@ void TrialScreen::updateLight(Clock::time_point now) {
         nextChange_ = now + randomGap();
         coordinator_.notifyLightOff();
     } else {
+        if (cfg_.cues.empty()) return;
+        std::uniform_int_distribution<size_t> pick(0, cfg_.cues.size() - 1);
+        cue_ = cfg_.cues[pick(rng_)];
         islig_ = true;
         nextChange_ = now + toDur(cfg_.onSec);
-        side_ = std::uniform_int_distribution<int>(0, 1)(rng_) == 0
-                    ? Side::Left
-                    : Side::Right;
 
-        coordinator_.notifyLightOn(this->side_, now);
+        coordinator_.notifyLightOn(cue_, now);
     }
 }
 
@@ -99,9 +134,8 @@ ScreenId TrialScreen::tick() {
             float ms = std::chrono::duration<float, std::milli>(result->latency)
                            .count();
 
-            std::printf("%s 反應時間: %.1f ms (passed=%d)\n",
-                        side_ == Side::Left ? "左手" : "右手", ms,
-                        result->passed);
+            std::printf("燈 %d 反應時間: %.1f ms (passed=%d)\n",
+            cue_.first.index, ms, result->passed);
         }
     }
 

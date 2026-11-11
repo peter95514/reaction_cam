@@ -3,7 +3,6 @@
 
 enum class ScreenId { Menu, Setting, Trial, Exit };
 using Clock = std::chrono::steady_clock;
-enum class Side { Left, Right };
 
 class Screen {
 public:
