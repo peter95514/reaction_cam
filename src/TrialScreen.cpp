@@ -108,6 +108,7 @@ void TrialScreen::updateLight(Clock::time_point now) {
         std::uniform_int_distribution<size_t> pick(0, cfg_.cues.size() - 1);
         cue_ = cfg_.cues[pick(rng_)];
         islig_ = true;
+
         nextChange_ = now + toDur(cfg_.onSec);
 
         coordinator_.notifyLightOn(cue_, now);

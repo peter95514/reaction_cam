@@ -58,6 +58,7 @@ void TrialController::setAction(const Action& action){
 
 void TrialController::workerLoop() {
     cv::Mat frame;
+    int dbgFrame = 0;
     while (running_) {
         if (!cap_.read(frame) || frame.empty()) break;
         const auto captured = Clock::now();
@@ -75,5 +76,14 @@ void TrialController::workerLoop() {
         EvalResult r = evaluator_.evaluate(kp);
         passed_ = r.valid && r.passed;
         if (hasAction_) records_.push_back({captured, passed_});
+
+        // DEBUG: 每幀印出狀態與推論耗時
+        const float dbgMs = std::chrono::duration<float, std::milli>(
+                                Clock::now() - captured).count();
+        std::fprintf(stderr,
+                     "[%d] rois=%zu kp=%zu valid=%d score=%.0f hasAction=%d "
+                     "耗時=%.0fms\n",
+                     ++dbgFrame, rois.size(), kp.size(), r.valid, r.score,
+                     hasAction_, dbgMs);  // DEBUG
     }
 }
