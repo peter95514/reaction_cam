@@ -117,6 +117,7 @@ void TrialController::workerLoop() {
 
 
         std::lock_guard<std::mutex> lk(mtx_);
+        debugFrame_ = std::move(dbg);
         EvalResult r = evaluator_.evaluate(kp);
         passed_ = r.valid && r.passed;
         if (hasAction_) records_.push_back({captured, passed_});
