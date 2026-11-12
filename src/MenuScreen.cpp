@@ -7,11 +7,11 @@ ScreenId MenuScreen::tick() {
     ScreenId next = ScreenId::Menu;
 
     ui::beginFullscreen("##Menu");
-    ImGui::Dummy({0, 100});
-    ImGui::SetWindowFontScale(2.2f);
+    ImGui::Dummy({0, ui::px(100)});          // 修改
+    ui::setFontScale(2.2f);                  // 修改
     ui::centeredText("反應力測試");
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::Dummy({0, 50});
+    ui::setFontScale(1.0f);                  // 修改
+    ImGui::Dummy({0, ui::px(50)});
 
     if (ui::centeredButton("開始測試", 340, 68)) next = ScreenId::Trial;
     if (ui::centeredButton("設定", 340, 68)) next = ScreenId::Setting;

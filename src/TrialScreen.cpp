@@ -85,23 +85,25 @@ void TrialScreen::drawLight() {
     const ImVec2 ws = ImGui::GetWindowSize();
     const float cx = wp.x + ws.x * 0.5f;
     const float cy = wp.y + ws.y * 0.48f;
-    const float r = 90.f;
+    const float r = ui::px(90.0);
     // 燈多時縮小間距，避免超出視窗；n=2 時與原本一樣 (±190)
     const float spacing =
-        n > 1 ? std::min(380.f, (ws.x - 2.f * (r + 40.f)) / (n - 1)) : 0.f;
+            n > 1 ? std::min(ui::px(380.f),
+                         (ws.x - 2.f * (r + ui::px(40.f))) / (n - 1))
+              : 0.f;
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
     for (int i = 0; i < n; ++i) {
         ImVec2 c{cx + (i - (n - 1) * 0.5f) * spacing, cy};
         const bool lit = running && islig_ && i == cue_.first.index;
         if (lit) {
-            dl->AddCircleFilled(c, r + 24.f, (kOn & 0x00FFFFFF) | (40u << 24),
-                                64);
+            dl->AddCircleFilled(c, r + ui::px(24.f),
+                                (kOn & 0x00FFFFFF) | (40u << 24), 64);
             dl->AddCircleFilled(c, r, kOn, 64);
         } else {
             dl->AddCircleFilled(c, r, kOff, 64);
         }
-        dl->AddCircle(c, r, kRim, 64, 3.f);
+        dl->AddCircle(c, r, kRim, 64, ui::px(3.f));
     }
 }
 
@@ -114,9 +116,9 @@ void TrialScreen::drawReaction() {
 
     char buf[96];
     std::snprintf(buf, sizeof(buf), "%.0f ms", latenciesMs_.back());
-    ImGui::SetWindowFontScale(2.2f);
+    ui::setFontScale(2.2f);
     ui::centeredText(buf);
-    ImGui::SetWindowFontScale(1.0f);
+    ui::setFontScale(1.0f);
 
     const float avg =
         std::accumulate(latenciesMs_.begin(), latenciesMs_.end(), 0.f) /
@@ -127,11 +129,11 @@ void TrialScreen::drawReaction() {
 }
 
 bool TrialScreen::drawResult() {
-    ImGui::Dummy({0, 40});
-    ImGui::SetWindowFontScale(2.0f);
+    ImGui::Dummy({0, ui::px(40)});
+    ui::setFontScale(2.0f);
     ui::centeredText("測試完成");
-    ImGui::SetWindowFontScale(1.0f);
-    ImGui::Dummy({0, 20});
+    ui::setFontScale(1.0f);
+    ImGui::Dummy({0, ui::px(20)});
 
     char buf[96];
     if (!latenciesMs_.empty()) {
@@ -142,15 +144,14 @@ bool TrialScreen::drawResult() {
         std::snprintf(buf, sizeof(buf), "平均 %.0f ms    最佳 %.0f ms",
                       sum / latenciesMs_.size(), best);
         ui::centeredText(buf);
-        ImGui::Dummy({0, 10});
+        ImGui::Dummy({0, ui::px(10)});
     }
     for (size_t i = 0; i < latenciesMs_.size(); ++i) {
         std::snprintf(buf, sizeof(buf), "第 %zu 次：%.0f ms", i + 1,
                       latenciesMs_[i]);
         ui::centeredText(buf);
     }
-
-    ImGui::Dummy({0, 20});
+    ImGui::Dummy({0, ui::px(20)});
     return ui::centeredButton("回選單", 340, 68);
 }
 
