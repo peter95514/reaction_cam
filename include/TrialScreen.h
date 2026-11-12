@@ -8,7 +8,7 @@
 #include "Screen.h"
 #include "TrialCoordinator.h"
 
-enum class State { Idle, Waiting, On };
+enum class State { Idle, Waiting, On, Done};
 
 class TrialScreen : public Screen {
 public:
@@ -38,6 +38,7 @@ private:
     Cue cue_;
 
     int done_;
+    std::vector<float> latenciesMs_;
 
     Clock::duration toDur(float sec);
     Clock::duration randomGap();
@@ -45,6 +46,8 @@ private:
     void beginRun(Clock::time_point now);
     void updateLight(Clock::time_point now);
     void drawLight();
+    void drawReaction();
+    bool drawResult();
 
     TrialCoordinator coordinator_;
 
