@@ -24,10 +24,18 @@ static std::vector<Cue> defaultCues() {
     };
 }
 
+static Action defaultRelaxed() {
+    return {
+        {"L_down", L_HIP, L_SHOULDER, L_ELBOW, 0.f, 50.f, 1.0f},
+        {"R_down", R_HIP, R_SHOULDER, R_ELBOW, 0.f, 50.f, 1.0f},
+    };
+}
+
 void TrialScreen::enter() {
     state_ = State::Idle;
     islig_ = false;
     this->idleEnd_ = Clock::now() + toDur(cfg_.countdown);
+    coordinator_.setRelaxedPose(cfg_.relaxed);
     coordinator_.start();
 }
 
@@ -43,6 +51,7 @@ Clock::duration TrialScreen::toDur(float sec) {
 
 TrialScreen::TrialScreen() {
     cfg_.cues = defaultCues();
+    cfg_.relaxed = defaultRelaxed();
 }
 
 static ImU32 toImColor(LightColor c) {
@@ -98,22 +107,18 @@ Clock::duration TrialScreen::randomGap() {
 
 
 void TrialScreen::updateLight(Clock::time_point now) {
+    // 亮燈中：不設逾時，只等 tick() 裡 poll() 回報完成後由 turnOff() 熄燈
+    if (islig_) return;
+
     if (now < this->nextChange_) return;
+    if (cfg_.cues.empty()) return;
+    // 隨機間隔已到，但還沒回到放鬆姿勢就繼續等
+    if (!coordinator_.isRelaxed(cfg_.relaxFrames)) return;
 
-    if (islig_) {
-        islig_ = false;
-        nextChange_ = now + randomGap();
-        coordinator_.notifyLightOff();
-    } else {
-        if (cfg_.cues.empty()) return;
-        std::uniform_int_distribution<size_t> pick(0, cfg_.cues.size() - 1);
-        cue_ = cfg_.cues[pick(rng_)];
-        islig_ = true;
-
-        nextChange_ = now + toDur(cfg_.onSec);
-
-        coordinator_.notifyLightOn(cue_, now);
-    }
+    std::uniform_int_distribution<size_t> pick(0, cfg_.cues.size() - 1);
+    cue_ = cfg_.cues[pick(rng_)];
+    islig_ = true;
+    coordinator_.notifyLightOn(cue_, now);
 }
 
 void TrialScreen::beginRun(Clock::time_point now) {

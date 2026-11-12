@@ -20,6 +20,7 @@ private:
     cv::VideoCapture cap_;
     std::unique_ptr<MotionDetector> detector_;
     ActionEvaluator evaluator_;
+    ActionEvaluator relaxEvaluator_;
     mutable std::mutex mtx_;
 
     std::thread worker_;
@@ -28,6 +29,8 @@ private:
 
     bool passed_ = 0;
     bool hasAction_ = 0;
+
+    int relaxFrames_ = 0;
 
     void workerLoop();
 
@@ -47,4 +50,7 @@ public:
     void resetRecords();
     std::vector<FrameResult> snapshotRecords() const;
     bool debugFrame(cv::Mat& out) const;  // DEBUG
+                                          //
+    void setRelaxPose(const Action& pose);
+    bool isRelaxed(int minFrames);
 };

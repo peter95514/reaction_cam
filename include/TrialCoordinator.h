@@ -20,7 +20,10 @@ public:
         Clock::duration latency;
     };
     bool debugFrame(cv::Mat& out) const { return controller_.debugFrame(out); }  // DEBUG
+                                                                                 //
 
+    void setRelaxedPose(const Action& pose) { controller_.setRelaxPose(pose); }
+    bool isRelaxed(int minFrames) { return controller_.isRelaxed(minFrames); }
     void start();
     void stop();
 

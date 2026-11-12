@@ -10,7 +10,7 @@
 #include "MotionDetector.h"
 
 TrialController::TrialController()
-    : evaluator_(0.4f, 80.f, 0.5f) {
+    : evaluator_(0.4f, 80.f, 0.5f), relaxEvaluator_(0.4f, 80.0f, 0.5f) {
 }
 
 // DEBUG
@@ -62,6 +62,17 @@ void TrialController::setAction(const Action& action){
     hasAction_ = !action.empty();
     passed_ = false;
     records_.clear();
+}
+
+void TrialController::setRelaxPose(const Action& pose) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    relaxEvaluator_.changerule(pose);
+    relaxFrames_ = 0;
+}
+
+bool TrialController::isRelaxed(int minFrames){
+    std::lock_guard<std::mutex> lk(mtx_);
+    return relaxFrames_ > minFrames;
 }
 
 void TrialController::workerLoop() {
@@ -121,6 +132,9 @@ void TrialController::workerLoop() {
         EvalResult r = evaluator_.evaluate(kp);
         passed_ = r.valid && r.passed;
         if (hasAction_) records_.push_back({captured, passed_});
+
+        EvalResult r1 = relaxEvaluator_.evaluate(kp);
+        relaxFrames_ = (r1.passed && r1.valid) ? relaxFrames_ + 1 : 0;
 
         // DEBUG: 每幀印出狀態與推論耗時
         const float dbgMs = std::chrono::duration<float, std::milli>(

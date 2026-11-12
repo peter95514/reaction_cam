@@ -15,10 +15,12 @@ public:
     struct Config {
         float countdown = 1.0f;
         float duration = 30.0f;
-        float onSec = 1.0f;
+        //float onSec = 1.0f;
         float gapMax = 1.0f;
         float gapMin = 0.4f;
         int lightCount = 2;
+        int relaxFrames = 3;
+        Action relaxed;
         std::vector<Cue> cues;
     };
 
