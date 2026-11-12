@@ -33,6 +33,7 @@ static Action defaultRelaxed() {
 
 void TrialScreen::enter() {
     state_ = State::Idle;
+    done_ = 0;
     islig_ = false;
     this->idleEnd_ = Clock::now() + toDur(cfg_.countdown);
     coordinator_.setRelaxedPose(cfg_.relaxed);
@@ -123,7 +124,7 @@ void TrialScreen::updateLight(Clock::time_point now) {
 
 void TrialScreen::beginRun(Clock::time_point now) {
     state_ = State::On;
-    runEnd_ = now + toDur(cfg_.duration);
+    done_ = 0;
     nextChange_ = now + randomGap();
 }
 
@@ -132,10 +133,7 @@ ScreenId TrialScreen::tick() {
     const auto now = Clock::now();
     if (this->state_ == State::Idle && now >= idleEnd_) beginRun(now);
 
-    if (this->state_ != State::Idle) {
-        if (now >= this->runEnd_) {
-            return ScreenId::Menu;
-        }
+        if (this->state_ != State::Idle) {
         updateLight(now);
         if (auto result = coordinator_.poll()) {
             float ms = std::chrono::duration<float, std::milli>(result->latency)
@@ -143,7 +141,13 @@ ScreenId TrialScreen::tick() {
 
             std::printf("燈 %d 反應時間: %.1f ms (passed=%d)\n",
             cue_.first.index, ms, result->passed);
+
+            ++done_;
+            islig_ = false;                      // 熄燈
+            coordinator_.notifyLightOff();
+            nextChange_ = now + randomGap();     // 排下一次亮燈
         }
+        if (done_ >= cfg_.targetCount) return ScreenId::Menu;
     }
 
     ui::beginFullscreen("##Trial");

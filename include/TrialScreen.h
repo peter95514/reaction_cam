@@ -14,7 +14,7 @@ class TrialScreen : public Screen {
 public:
     struct Config {
         float countdown = 1.0f;
-        float duration = 30.0f;
+        int targetCount = 10;
         //float onSec = 1.0f;
         float gapMax = 1.0f;
         float gapMin = 0.4f;
@@ -36,6 +36,8 @@ private:
     Config cfg_;  // config
     bool islig_;  // is the light on?
     Cue cue_;
+
+    int done_;
 
     Clock::duration toDur(float sec);
     Clock::duration randomGap();
