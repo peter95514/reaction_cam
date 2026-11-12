@@ -37,6 +37,11 @@ std::vector<FrameResult> TrialController::snapshotRecords() const {
 void TrialController::start() {
     if (running_) return;
     if (!cap_.open(0)) throw std::runtime_error("cant open cam");
+    cap_.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    cap_.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    cap_.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    cap_.set(cv::CAP_PROP_FPS, 30);
+    cap_.set(cv::CAP_PROP_BUFFERSIZE, 1);
 
     detector_ = std::make_unique<MotionDetector>(500, 25.0, 0, 1000.0);
     running_ = true;
